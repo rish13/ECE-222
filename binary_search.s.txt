@@ -1,0 +1,86 @@
+;*----------------------------------------------------------------------------
+;* Name:    	binary_search.s
+;* Purpose: 	Binary Search on an array
+;* Author:      ---
+;*----------------------------------------------------------------------------
+	THUMB
+	AREA MyCode, CODE, READONLY
+	ENTRY
+
+main PROC
+	EXPORT main
+;*----------------------------------------------------------------------------
+;* C++ code that we want to implement in ARM
+;*----------------------------------------------------------------------------
+; int arr[] = { 2, 5, 7, 10, 15, 19, 32, 67 };
+; int value = 2;
+; int length = 8;
+; int low = 0;
+; int high = length - 1;
+; while (low > high) {
+;	int mid = (low + high) / 2;
+;	if (arr[mid] == value) { 
+;		return mid;
+;	}
+;	if (arr[mid] > value) {
+;		high = mid - 1;
+;	} else {
+;		low = mid + 1;
+;	}
+; }
+;*----------------------------------------------------------------------------
+;* Register Assignment
+;*----------------------------------------------------------------------------
+; R0 = Base address of the array of values
+; R1 = Length of the array
+; R2 = Value we are looking for in the array
+; R3 = Low index for (sub)array
+; R4 = High index for (sub)-array
+; R5 = Address to store index if search is successful
+; R6 = Mid index for (sub)array
+; R7 = Mid-point array value
+;*----------------------------------------------------------------------------
+ 
+
+	LDR		R0, =ARRAY				; Load the address of our array
+	LDR		R1, LENGTH				; Load the length of our array
+	LDR		R2, VALUE				; Load the value we're searching for
+	MOV		R3, #0x0				; Start our "low" pointer at 0x0
+	SUB		R4, R1, #1				; Start our "high" pointer
+	LDR		R5, =INDEX				; Load the address of our index storage for successful search
+
+LOOP
+	CMP		R3, R4					; Check if low > high
+	MOVGT	R6, #-1					; If low > high, store -1 (unsuccessful code) into R6
+	BGT		DONE					; If low > high, then search was unsuccesful, break from loop
+	
+	ADD		R6, R3, R4				; Calculate the mid point (low + high) / 2
+	LSR		R6, R6, #1				; ''
+	LDR		R7, [R0, R6, LSL #2]	; Load the value at the middle of the array; [R7] <- [[R0] + 4*[R6]], 4* since each # is 4 bytes 
+	CMP		R7, R2					; Compare if the midpoint is the value we're looking for
+	
+	BEQ		DONE					; If compare results in 0, we've found our value
+	SUBGT	R4, R6, #1				; If mid value > search value, set our high index = mid - 1, search on lower half of (sub)array
+	ADDLT	R3, R6, #1				; If mid value < search value, set our low index = mid + 1, search on upper half of (sub)array
+	B		LOOP
+
+DONE
+	STR		R6, [R5]				; Store R6 into main memory at INDEX; Stores -1 if failure, and the index of value if success
+	
+;*----------------------------------------------------------------------------
+;* This is the end of the section where you put your instructions.
+;*----------------------------------------------------------------------------
+        ENDP ; main
+
+;*----------------------------------------------------------------------------
+;* READONLY DATA section
+;*----------------------------------------------------------------------------
+ARRAY	DCD		2, 5, 7, 10, 15, 19, 32, 67
+LENGTH	DCD		8
+VALUE	DCD		67
+;*----------------------------------------------------------------------------
+;* READWRITE DATA section.
+;*----------------------------------------------------------------------------
+INDEX	DCD		0
+
+        END
